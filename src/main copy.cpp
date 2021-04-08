@@ -9,17 +9,18 @@
 #define STAPSK  "18997707422" // your password
 #endif
 //L298n motor driver 
-#define PIN_PWN_MOTOR1 D0 //D5
-#define PIN_MOTOR1_IN1 D1 //D8
-#define PIN_MOTOR1_IN2 D2 //D7
-#define PIN_PWN_MOTOR2 D3 //D6
-#define PIN_MOTOR2_IN3 D4 //D4
-#define PIN_MOTOR2_IN4 D5 //D3
+#define PIN_PWN_MOTOR1 14 //D5
+#define PIN_PWN_MOTOR2 12 //D6
+#define PIN_MOTOR1_IN1 15 //D8
+#define PIN_MOTOR1_IN2 13 //D7
+#define PIN_MOTOR2_IN3 2 //D4
+#define PIN_MOTOR2_IN4 0 //D3
+#define PIN_LED 5 //D3
 
 const char* ssid     = STASSID;
 const char* password = STAPSK;
 
-const char* host = "192.168.0.102";
+const char* host = "192.168.0.100";
 const uint16_t port = 5000;
 
 void goBack();
@@ -58,13 +59,17 @@ uint8_t receive_array[5];
 
 void setup() {
   Serial.begin(9600);
+
   // sets the pins as outputs:
   pinMode(PIN_MOTOR1_IN1, OUTPUT);
   pinMode(PIN_MOTOR1_IN2, OUTPUT);
-  pinMode(PIN_PWN_MOTOR1, OUTPUT);
+  //pinMode(PIN_PWN_MOTOR1, OUTPUT);
   pinMode(PIN_MOTOR2_IN3, OUTPUT);
   pinMode(PIN_MOTOR2_IN4, OUTPUT);
-  pinMode(PIN_PWN_MOTOR2, OUTPUT);
+  //pinMode(PIN_PWN_MOTOR2, OUTPUT);
+  pinMode(D1, OUTPUT);  
+  // digitalWrite(PIN_PWN_MOTOR1, HIGH);
+ // digitalWrite(PIN_PWN_MOTOR2, HIGH);  
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
@@ -105,19 +110,11 @@ void connected() {
 }
 
 void loop() {
-    setSpeed(500,300);
-    goForward();
-    delay(5000); 
-    setSpeed(900,900);
-    goBack();
-    delay(5000); 
-    
-}
-/*
-
-void loop() {
+  int value_engine1 = 0;
+  int value_engine2 = 0; 
   // Read all the lines of the reply from server and print them to Serial
   Serial.println("Receiving from remote server");
+  digitalWrite(PIN_LED,HIGH);
   //String s_rep = join(send_array, ' ', 5);
   //Serial.print("SENDING >> ");
   //Serial.println(s_rep);
@@ -140,7 +137,9 @@ void loop() {
             goBack();     
           else
             stop();
-        setSpeed(receive_array[0],receive_array[1]);
+        value_engine1 = receive_array[0];
+        value_engine2 = receive_array[1];
+        setSpeed(value_engine1,value_engine2);
       }   
   }  
 
@@ -155,21 +154,20 @@ void loop() {
   //  client.stop();
   delay(5000); 
 }
-*/
 
 void setSpeed(int value_engine1, int value_engine2) {
-    analogWrite(PIN_PWN_MOTOR1, value_engine1);
-    analogWrite(PIN_PWN_MOTOR2, value_engine2);  
+    digitalWrite(PIN_PWN_MOTOR1, value_engine1);
+    digitalWrite(PIN_PWN_MOTOR2, value_engine2);  
 }
 
-void goBack() {
+void goForward() {
      digitalWrite(PIN_MOTOR1_IN1,HIGH);
      digitalWrite(PIN_MOTOR1_IN2,LOW);
      digitalWrite(PIN_MOTOR2_IN3,HIGH);
      digitalWrite(PIN_MOTOR2_IN4,LOW);     
   }
 
-void goForward() {
+void goBack() {
       digitalWrite(PIN_MOTOR1_IN1,LOW);
       digitalWrite(PIN_MOTOR1_IN2,HIGH);
       digitalWrite(PIN_MOTOR2_IN3,LOW);
