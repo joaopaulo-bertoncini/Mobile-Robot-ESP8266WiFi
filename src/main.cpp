@@ -30,7 +30,7 @@ void stop();
 
 WiFiClient client;
 
-String join(uint8_t vals[], char sep, int items) {
+String join(uint16_t vals[], char sep, int items) {
   String out = "";
   
   for (int i=0; i<items; i++) {
@@ -43,18 +43,18 @@ String join(uint8_t vals[], char sep, int items) {
   return out;
 }
 
-void split(String value, char sep, uint8_t vals[], int items) {
+void split(String value, char sep, uint16_t vals[], int items) {
   int count = 0;
   char *val = strtok((char *)value.c_str(), &sep);
   
   while (val != NULL && count < items) {
-    vals[count++] = (uint8_t)atoi(val);
+    vals[count++] = (uint16_t)atoi(val);
     val = strtok(NULL, &sep);
   }
 }
 
-uint8_t send_array[5];
-uint8_t receive_array[5];
+uint16_t send_array[3];
+uint16_t receive_array[3];
 
 void setup() {
   Serial.begin(9600);
@@ -105,17 +105,6 @@ void connected() {
 }
 
 void loop() {
-    setSpeed(500,300);
-    goForward();
-    delay(5000); 
-    setSpeed(900,900);
-    goBack();
-    delay(5000); 
-    
-}
-/*
-
-void loop() {
   // Read all the lines of the reply from server and print them to Serial
   Serial.println("Receiving from remote server");
   //String s_rep = join(send_array, ' ', 5);
@@ -153,9 +142,7 @@ void loop() {
   //  Close the connection
   //  Serial.println("closing connection");
   //  client.stop();
-  delay(5000); 
 }
-*/
 
 void setSpeed(int value_engine1, int value_engine2) {
     analogWrite(PIN_PWN_MOTOR1, value_engine1);
