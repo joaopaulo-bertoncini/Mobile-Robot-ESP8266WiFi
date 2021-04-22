@@ -4,10 +4,6 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 
-#ifndef STASSID
-#define STASSID "PLUGNS" // your network
-#define STAPSK  "18997707422" // your password
-#endif
 //L298n motor driver 
 #define PIN_PWN_MOTOR1 D0 //D5
 #define PIN_MOTOR1_IN1 D1 //D8
@@ -16,19 +12,18 @@
 #define PIN_MOTOR2_IN3 D4 //D4
 #define PIN_MOTOR2_IN4 D5 //D3
 
-const char* ssid     = STASSID;
-const char* password = STAPSK;
-
 const char* host = "192.168.0.102";
 const uint16_t port = 5000;
 
-void goBack();
-void goForward();
-void setSpeed(int,int);
-void connected();
-void stop();
-
 WiFiClient client;
+uint16_t send_array[3];
+uint16_t receive_array[3];
+
+// DEFINE HERE THE KNOWN NETWORKS
+const char* KNOWN_SSID[] = {"PLUGNS", "JPSB"};
+const char* KNOWN_PASSWORD[] = {"18997707422", "1833235315"};
+const int   KNOWN_SSID_COUNT = sizeof(KNOWN_SSID) / sizeof(KNOWN_SSID[0]); // number of known networks
+
 
 String join(uint16_t vals[], char sep, int items) {
   String out = "";
@@ -53,44 +48,37 @@ void split(String value, char sep, uint16_t vals[], int items) {
   }
 }
 
-uint16_t send_array[3];
-uint16_t receive_array[3];
+void setSpeed(int value_engine1, int value_engine2) {
+    analogWrite(PIN_PWN_MOTOR1, value_engine1);
+    analogWrite(PIN_PWN_MOTOR2, value_engine2);  
+}
 
-void setup() {
-  Serial.begin(9600);
-  // sets the pins as outputs:
-  pinMode(PIN_MOTOR1_IN1, OUTPUT);
-  pinMode(PIN_MOTOR1_IN2, OUTPUT);
-  pinMode(PIN_PWN_MOTOR1, OUTPUT);
-  pinMode(PIN_MOTOR2_IN3, OUTPUT);
-  pinMode(PIN_MOTOR2_IN4, OUTPUT);
-  pinMode(PIN_PWN_MOTOR2, OUTPUT);
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
+void goBack() {
+     digitalWrite(PIN_MOTOR1_IN1,HIGH);
+     digitalWrite(PIN_MOTOR1_IN2,LOW);
+     digitalWrite(PIN_MOTOR2_IN3,HIGH);
+     digitalWrite(PIN_MOTOR2_IN4,LOW);     
+}
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+void goForward() {
+      digitalWrite(PIN_MOTOR1_IN1,LOW);
+      digitalWrite(PIN_MOTOR1_IN2,HIGH);
+      digitalWrite(PIN_MOTOR2_IN3,LOW);
+      digitalWrite(PIN_MOTOR2_IN4,HIGH); 
+}  
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+void stop() {
+      digitalWrite(PIN_MOTOR1_IN1,LOW);
+      digitalWrite(PIN_MOTOR1_IN2,LOW);
+      digitalWrite(PIN_MOTOR2_IN3,LOW);
+      digitalWrite(PIN_MOTOR2_IN4,LOW); 
+}  
 
+void connected() { 
   Serial.print("connecting to ");
   Serial.print(host);
   Serial.print(':');
   Serial.println(port);
-
-  connected();
-}
-
-void connected() { 
   // Use WiFiClient class to create TCP connections
   if (!client.connect(host, port)) {
     Serial.println("Connection failed");
@@ -102,6 +90,92 @@ void connected() {
   if (client.connected()) {
     client.println("Robot01");
   }  
+}
+
+void setup() {
+  boolean wifiFound = false;
+  int i, n;
+  Serial.begin(9600);
+  // sets the pins as outputs:
+  pinMode(PIN_MOTOR1_IN1, OUTPUT);
+  pinMode(PIN_MOTOR1_IN2, OUTPUT);
+  pinMode(PIN_PWN_MOTOR1, OUTPUT);
+  pinMode(PIN_MOTOR2_IN3, OUTPUT);
+  pinMode(PIN_MOTOR2_IN4, OUTPUT);
+  pinMode(PIN_PWN_MOTOR2, OUTPUT);
+
+  // ----------------------------------------------------------------
+  // Set WiFi to station mode and disconnect from an AP if it was previously connected
+  // ----------------------------------------------------------------
+  WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
+  delay(100);
+  Serial.println("Setup done");
+
+  // ----------------------------------------------------------------
+  // WiFi.scanNetworks will return the number of networks found
+  // ----------------------------------------------------------------
+  Serial.println(F("scan start"));
+  int nbVisibleNetworks = WiFi.scanNetworks();
+  Serial.println(F("scan done"));
+  if (nbVisibleNetworks == 0) {
+    Serial.println(F("no networks found. Reset to try again"));
+    while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
+  }
+
+  // ----------------------------------------------------------------
+  // if you arrive here at least some networks are visible
+  // ----------------------------------------------------------------
+  Serial.print(nbVisibleNetworks);
+  Serial.println(" network(s) found");
+
+  // ----------------------------------------------------------------
+  // check if we recognize one by comparing the visible networks
+  // one by one with our list of known networks
+  // ----------------------------------------------------------------
+  for (i = 0; i < nbVisibleNetworks; ++i) {
+    Serial.println(WiFi.SSID(i)); // Print current SSID
+    for (n = 0; n < KNOWN_SSID_COUNT; n++) { // walk through the list of known SSID and check for a match
+      if (strcmp(KNOWN_SSID[n], WiFi.SSID(i).c_str())) {
+        Serial.print(F("\tNot matching "));
+        Serial.println(KNOWN_SSID[n]);
+      } else { // we got a match
+        wifiFound = true;
+        break; // n is the network index we found
+      }
+    } // end for each known wifi SSID
+    if (wifiFound) break; // break from the "for each visible network" loop
+  } // end for each visible network
+
+  if (!wifiFound) {
+    Serial.println(F("no Known network identified. Reset to try again"));
+    while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
+  }
+
+  // ----------------------------------------------------------------
+  // if you arrive here you found 1 known SSID
+  // ----------------------------------------------------------------
+  Serial.print(F("\nConnecting to "));
+  Serial.println(KNOWN_SSID[n]);
+
+  // ----------------------------------------------------------------
+  // We try to connect to the WiFi network we found
+  // ----------------------------------------------------------------
+  WiFi.begin(KNOWN_SSID[n], KNOWN_PASSWORD[n]);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+
+  // ----------------------------------------------------------------
+  // SUCCESS, you are connected to the known WiFi network
+  // ----------------------------------------------------------------
+  Serial.println(F("WiFi connected, your IP address is "));
+  Serial.println(WiFi.localIP());
+
+  connected();
 }
 
 void loop() {
@@ -138,34 +212,4 @@ void loop() {
   if (!client.connected()) {
     connected();
   }
-
-  //  Close the connection
-  //  Serial.println("closing connection");
-  //  client.stop();
 }
-
-void setSpeed(int value_engine1, int value_engine2) {
-    analogWrite(PIN_PWN_MOTOR1, value_engine1);
-    analogWrite(PIN_PWN_MOTOR2, value_engine2);  
-}
-
-void goBack() {
-     digitalWrite(PIN_MOTOR1_IN1,HIGH);
-     digitalWrite(PIN_MOTOR1_IN2,LOW);
-     digitalWrite(PIN_MOTOR2_IN3,HIGH);
-     digitalWrite(PIN_MOTOR2_IN4,LOW);     
-  }
-
-void goForward() {
-      digitalWrite(PIN_MOTOR1_IN1,LOW);
-      digitalWrite(PIN_MOTOR1_IN2,HIGH);
-      digitalWrite(PIN_MOTOR2_IN3,LOW);
-      digitalWrite(PIN_MOTOR2_IN4,HIGH); 
-  }  
-
-void stop() {
-      digitalWrite(PIN_MOTOR1_IN1,LOW);
-      digitalWrite(PIN_MOTOR1_IN2,LOW);
-      digitalWrite(PIN_MOTOR2_IN3,LOW);
-      digitalWrite(PIN_MOTOR2_IN4,LOW); 
-  }  
