@@ -60,12 +60,26 @@ void goBack() {
      digitalWrite(PIN_MOTOR2_IN4,LOW);     
 }
 
+void goLeft() {
+      digitalWrite(PIN_MOTOR1_IN1,HIGH);
+      digitalWrite(PIN_MOTOR1_IN2,LOW);
+      digitalWrite(PIN_MOTOR2_IN3,LOW);
+      digitalWrite(PIN_MOTOR2_IN4,HIGH); 
+}  
+
+void goRight() {
+      digitalWrite(PIN_MOTOR1_IN1,LOW);
+      digitalWrite(PIN_MOTOR1_IN2,HIGH);
+      digitalWrite(PIN_MOTOR2_IN3,HIGH);
+      digitalWrite(PIN_MOTOR2_IN4,LOW); 
+} 
+
 void goForward() {
       digitalWrite(PIN_MOTOR1_IN1,LOW);
       digitalWrite(PIN_MOTOR1_IN2,HIGH);
       digitalWrite(PIN_MOTOR2_IN3,LOW);
       digitalWrite(PIN_MOTOR2_IN4,HIGH); 
-}  
+} 
 
 void stop() {
       digitalWrite(PIN_MOTOR1_IN1,LOW);
@@ -75,18 +89,18 @@ void stop() {
 }  
 
 void connected() { 
-  Serial.print("connecting to ");
+  Serial.print(">>CONNECTING TO ");
   Serial.print(host);
   Serial.print(':');
   Serial.println(port);
   // Use WiFiClient class to create TCP connections
   if (!client.connect(host, port)) {
-    Serial.println("Connection failed");
+    Serial.println(">>CONNECTION FAILED");
     delay(5000);
     return;
   }  
   // This will send a string to the server
-  Serial.println("Sending Robot name to server");
+  Serial.println(">>SENDING ROBOT NAME TO SERVER ");
   if (client.connected()) {
     client.println("Robot01");
   }  
@@ -110,16 +124,16 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   delay(100);
-  Serial.println("Setup done");
+  Serial.println(">>SETUP DONE");
 
   // ----------------------------------------------------------------
   // WiFi.scanNetworks will return the number of networks found
   // ----------------------------------------------------------------
-  Serial.println(F("scan start"));
+  Serial.println(F(">>SCAN START"));
   int nbVisibleNetworks = WiFi.scanNetworks();
-  Serial.println(F("scan done"));
+  Serial.println(F(">>SCAN DONE"));
   if (nbVisibleNetworks == 0) {
-    Serial.println(F("no networks found. Reset to try again"));
+    Serial.println(F(">>NO NETWORKS FOUND. RESET TO TRY AGAIN"));
     while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
   }
 
@@ -127,7 +141,7 @@ void setup() {
   // if you arrive here at least some networks are visible
   // ----------------------------------------------------------------
   Serial.print(nbVisibleNetworks);
-  Serial.println(" network(s) found");
+  Serial.println(" NETWORK(S) FOUND");
 
   // ----------------------------------------------------------------
   // check if we recognize one by comparing the visible networks
@@ -148,14 +162,14 @@ void setup() {
   } // end for each visible network
 
   if (!wifiFound) {
-    Serial.println(F("no Known network identified. Reset to try again"));
+    Serial.println(F(">>NO KNOWN NETWORK IDENTIFIED. RESET TO TRY AGAIN"));
     while (true); // no need to go further, hang in there, will auto launch the Soft WDT reset
   }
 
   // ----------------------------------------------------------------
   // if you arrive here you found 1 known SSID
   // ----------------------------------------------------------------
-  Serial.print(F("\nConnecting to "));
+  Serial.print(F("\nCONNECTING TO "));
   Serial.println(KNOWN_SSID[n]);
 
   // ----------------------------------------------------------------
@@ -172,7 +186,7 @@ void setup() {
   // ----------------------------------------------------------------
   // SUCCESS, you are connected to the known WiFi network
   // ----------------------------------------------------------------
-  Serial.println(F("WiFi connected, your IP address is "));
+  Serial.println(F(">>WIFI CONNECTED, YOUR IP ADDRESS IS "));
   Serial.println(WiFi.localIP());
 
   connected();
@@ -180,7 +194,7 @@ void setup() {
 
 void loop() {
   // Read all the lines of the reply from server and print them to Serial
-  Serial.println("Receiving from remote server");
+  Serial.println(">>RECEIVING FROM REMOTE SERVER");
   //String s_rep = join(send_array, ' ', 5);
   //Serial.print("SENDING >> ");
   //Serial.println(s_rep);
@@ -189,20 +203,31 @@ void loop() {
       if (client.available())
       {
         String buffer = client.readStringUntil('\n');
-        client.println("Ok - Command Receive");
+        client.println("OK - COMMAND RECEIVE");
         split(buffer, ';', receive_array, 3);
         Serial.print("RECEIVING << ");
         Serial.println(buffer);
         for (int i=0; i<3; i++) {
           Serial.println(receive_array[i]);
         }
-        if (receive_array[2]==1)
+        switch (receive_array[2])
+        {
+        case 1:
           goForward();
-        else
-          if (receive_array[2]==2)
-            goBack();     
-          else
-            stop();
+          break;
+        case 2:
+          goBack();
+          break;
+        case 3:
+          goRight();
+          break;
+        case 4:
+          goLeft();
+          break;
+        default:
+          stop();
+          break;
+        }
         setSpeed(receive_array[0],receive_array[1]);
       }   
   }  
