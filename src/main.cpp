@@ -3,6 +3,8 @@
 //
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266Ping.h>
+#include <SPI.h>
 
 //L298n motor driver 
 #define PIN_PWN_MOTOR1 D0 //D5
@@ -106,6 +108,61 @@ void connected() {
   }  
 }
 
+void printMacAddress(byte mac[]) {
+  for (int i = 5; i >= 0; i--) {
+    if (mac[i] < 16) {
+      Serial.print("0");
+    }
+    Serial.print(mac[i], HEX);
+    if (i > 0) {
+      Serial.print(":");
+    }
+  }
+  Serial.println();
+}
+
+void printWiFiData() {
+  // print your WiFi 101 Shield's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP address : ");
+  Serial.println(ip);
+
+  Serial.print("Subnet mask: ");
+  Serial.println((IPAddress)WiFi.subnetMask());
+
+  Serial.print("Gateway IP : ");
+  Serial.println((IPAddress)WiFi.gatewayIP());
+
+  // print your MAC address:
+  byte mac[6];
+  WiFi.macAddress(mac);
+  Serial.print("MAC address: ");
+  printMacAddress(mac);
+}
+
+void printCurrentNet() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI): ");
+  Serial.println(rssi);
+}
+
+void pingNetwork() {
+  const IPAddress remote_ip(192, 168, 15, 1);
+  Serial.print("Pinging host ");
+  Serial.println(remote_ip);
+
+  if(Ping.ping(remote_ip)) {
+    Serial.println("Success!!");
+  } else {
+    Serial.println("Error :(");
+  }
+}
+
 void setup() {
   boolean wifiFound = false;
   int i, n;
@@ -186,8 +243,7 @@ void setup() {
   // ----------------------------------------------------------------
   // SUCCESS, you are connected to the known WiFi network
   // ----------------------------------------------------------------
-  Serial.println(F(">>WIFI CONNECTED, YOUR IP ADDRESS IS "));
-  Serial.println(WiFi.localIP());
+  printWiFiData();
 
   connected();
 }
@@ -238,3 +294,4 @@ void loop() {
     connected();
   }
 }
+
